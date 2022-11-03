@@ -1,0 +1,64 @@
+---
+name: Base workflow
+on:
+  push:
+    branches:
+      - master
+    pull_request:
+
+jobs:
+  symfony:
+    name: Symfony job
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Lint annotations
+        uses: korelstar/phplint-problem-matcher@v1 # https://github.com/korelstar/phplint-problem-matcher
+
+      - name: PHP syntax check (via php -l)
+        run: find . -type f -name '*.php' -exec php -l '{}' \;
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2 # https://github.com/shivammathur/setup-php
+        with:
+          php-version: '8.1'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo, mysql
+
+      - name: Get composer cache
+        id: composer-cache
+        run: echo "::set-output name=dir::$(composer config cache-files-dir)"
+
+      - name: Cache composer dependencies
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os}}-composer-
+
+      - name: Install dependencies
+        run: composer install --no-progress --prefer-dist --optimize-autoloader
+
+      - name: Symfony version
+        run: php bin/console -V
+
+      - name: Check vulnerabilities # https://github.com/fabpot/local-php-security-checker
+        run: |
+          curl --silent https://api.github.com/repos/fabpot/local-php-security-checker/releases/latest \
+              | awk '/browser_download_url(.+)linux_amd64/{ printf $2 "\n" }' \
+              | xargs -I{} curl {} --location --silent --output ./local-php-security-checker \
+              && chmod +x ./local-php-security-checker \
+              && ./local-php-security-checker
+
+      - name: Lint container
+        run: php bin/console lint:container
+
+      - name: Lint YAML configs
+        run: php bin/console lint:yaml config/
+
+      - name: Install phpstan
+        run: composer install --no-progress --prefer-dist --working-dir=tools/php-cs-fixer
+
+      - name: Static analysis (phpstan)
+        run: tools/phpstan/vendor/bin/phpstan analyze --no-progress
