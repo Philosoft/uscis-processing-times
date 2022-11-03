@@ -74,7 +74,7 @@ class CrawlI140Command extends Command
                 $primarySubtype = $subtypes[0];
                 $ranges = $primarySubtype->range;
                 if (count($ranges) > 0) {
-                    $times[] = [$center, $ranges[0]->value];
+                    $times[] = [$center, $ranges[1]->value ?? $ranges[0]->value ?? -1];
                 }
             }
         }
