@@ -1,0 +1,7 @@
+parameters:
+    level: 9
+    paths:
+        - src
+    symfony:
+        containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
+        consoleApplicationLoader: tools/phpstan/console-application.php
