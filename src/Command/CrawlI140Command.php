@@ -6,6 +6,8 @@ namespace App\Command;
 
 use App\Dto\ApiResponse;
 use App\Dto\Partial\Subtype;
+use App\Entity\I140Entry;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\BrowserKit\Exception\BadMethodCallException;
 use Symfony\Component\BrowserKit\HttpBrowser;
 use Symfony\Component\BrowserKit\Response;
@@ -28,8 +30,10 @@ class CrawlI140Command extends Command
         'nebraska' => 'https://egov.uscis.gov/processing-times/api/processingtime/I-140/NSC/136A-NIW',
     ];
 
-    public function __construct(private readonly SerializerInterface $serializer)
-    {
+    public function __construct(
+        private readonly SerializerInterface $serializer,
+        private readonly EntityManagerInterface $entityManager
+    ) {
         parent::__construct(null);
     }
 
@@ -64,6 +68,9 @@ class CrawlI140Command extends Command
             $data[$center] = $response->getContent();
         }
 
+        /** @var I140Entry[] $entries */
+        $entries = [];
+
         $times = [];
         foreach ($data as $center => $jsonString) {
             /** @var ApiResponse $apiResponse */
@@ -74,10 +81,20 @@ class CrawlI140Command extends Command
                 $primarySubtype = $subtypes[0];
                 $ranges = $primarySubtype->range;
                 if (count($ranges) > 0) {
-                    $times[] = [$center, $ranges[1]->value ?? $ranges[0]->value ?? -1];
+                    $waitTime = $ranges[1]->value ?? $ranges[0]->value ?? -1.0;
+                    $times[] = [$center, $waitTime];
+
+                    $entry = new I140Entry();
+                    $entry->setProcessingCenter($center);
+                    $entry->setRawResponse($jsonString);
+                    $entry->setWaitTime($waitTime);
+
+                    $this->entityManager->persist($entry);
                 }
             }
         }
+
+        $this->entityManager->flush();
 
         $io->table(['center', 'time'], $times);
 
