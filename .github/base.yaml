@@ -9,7 +9,7 @@ on:
 jobs:
   symfony:
     name: Symfony job
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -26,16 +26,14 @@ jobs:
           php-version: '8.1'
           extensions: mbstring, xml, ctype, iconv, intl, pdo, mysql
 
-      - name: Get composer cache
+      - name: Cache Composer packages
         id: composer-cache
-        run: echo "::set-output name=dir::$(composer config cache-files-dir)"
-
-      - name: Cache composer dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os}}-composer-
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
 
       - name: Install dependencies
         run: composer install --no-progress --prefer-dist --optimize-autoloader
@@ -56,6 +54,15 @@ jobs:
 
       - name: Lint YAML configs
         run: php bin/console lint:yaml config/
+
+      - name: Cache Composer packages for phpstan
+        id: composer-cache--phpstan
+        uses: actions/cache@v3
+        with:
+          path: tools/phpstan/vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
 
       - name: Install phpstan
         run: composer install --no-progress --prefer-dist --working-dir=tools/php-cs-fixer
