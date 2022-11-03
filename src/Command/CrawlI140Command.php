@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Dto\ApiResponse;
+use App\Dto\Partial\Subtype;
 use Symfony\Component\BrowserKit\Exception\BadMethodCallException;
 use Symfony\Component\BrowserKit\HttpBrowser;
 use Symfony\Component\BrowserKit\Response;
@@ -13,6 +15,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Component\Serializer\SerializerInterface;
 
 #[AsCommand(
     name: 'app:crawl:i140',
@@ -24,6 +27,11 @@ class CrawlI140Command extends Command
         'texas' => 'https://egov.uscis.gov/processing-times/api/processingtime/I-140/SSC/136A-NIW',
         'nebraska' => 'https://egov.uscis.gov/processing-times/api/processingtime/I-140/NSC/136A-NIW',
     ];
+
+    public function __construct(private readonly SerializerInterface $serializer)
+    {
+        parent::__construct(null);
+    }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
@@ -58,11 +66,17 @@ class CrawlI140Command extends Command
 
         $times = [];
         foreach ($data as $center => $jsonString) {
-            $json = json_decode($jsonString, true, flags: JSON_THROW_ON_ERROR);
-            /** @phpstan-ignore-next-line */
-            $range = $json['data']['processing_time']['subtypes'][0]['range'] ?? [];
-            /** @phpstan-ignore-next-line */
-            $times[] = [$center, $range[1]['value'] ?? -1];
+            /** @var ApiResponse $apiResponse */
+            $apiResponse = $this->serializer->deserialize($jsonString, ApiResponse::class, 'json');
+            /** @var Subtype[] $subtypes */
+            $subtypes = $apiResponse->data->processingTime->subtypes;
+            if (count($subtypes) > 0) {
+                $primarySubtype = $subtypes[0];
+                $ranges = $primarySubtype->range;
+                if (count($ranges) > 0) {
+                    $times[] = [$center, $ranges[0]->value];
+                }
+            }
         }
 
         $io->table(['center', 'time'], $times);
