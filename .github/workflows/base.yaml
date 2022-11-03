@@ -65,7 +65,7 @@ jobs:
             ${{ runner.os }}-php-
 
       - name: Install phpstan
-        run: composer install --no-progress --prefer-dist --working-dir=tools/php-cs-fixer
+        run: composer install --no-progress --prefer-dist --working-dir=tools/phpstan
 
       - name: Static analysis (phpstan)
         run: tools/phpstan/vendor/bin/phpstan analyze --no-progress
