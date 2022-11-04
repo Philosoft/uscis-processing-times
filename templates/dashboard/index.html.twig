@@ -14,7 +14,7 @@
             <h2 class="text-2xl my-1">Tabular view</h2>
 
             <table class="rounded">
-                <thead class="border-b font-bold bg-slate-50">
+                <thead class="text-bold bg-slate-300 dark:bg-slate-800 rounded border-b">
                 <tr class="p-1">
                     <th>Center</th>
                     <th>Waiting time</th>
@@ -44,7 +44,7 @@
             <h2 class="text-2xl">Tabular view</h2>
 
             <table>
-                <thead class="text-bold bg-slate-300 rounded border-b">
+                <thead class="text-bold bg-slate-300 dark:bg-slate-800 rounded border-b">
                 <tr>
                     <th>Center</th>
                     <th>Time</th>
@@ -53,7 +53,7 @@
 
                 <tbody>
                 {% for entry in i485Entries %}
-                    <tr class="border-b even:bg-slate-300 p-1">
+                    <tr class="border-b even:bg-slate-300 even:dark:bg-slate-900 even:dark:text-slate-200 p-1">
                         <td>{{ entry.processingCenter }}</td>
                         <td>{{ entry.waitTime }}</td>
                     </tr>
