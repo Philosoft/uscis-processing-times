@@ -9,6 +9,7 @@ use App\Dto\FormOfficesApiResponse;
 use App\Dto\Partial\FormOffices\Office;
 use App\Dto\Partial\Subtype;
 use App\Entity\I485Entry;
+use App\Repository\I485EntryRepository;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\BrowserKit\Exception\BadMethodCallException;
@@ -31,6 +32,7 @@ class CrawlI485Command extends Command
     public function __construct(
         private readonly SerializerInterface $serializer,
         private readonly EntityManagerInterface $entityManager,
+        private readonly I485EntryRepository $entryRepository
     ) {
         parent::__construct();
     }
@@ -56,22 +58,31 @@ class CrawlI485Command extends Command
         $io->info('Navigate to initial page: https://egov.uscis.gov/processing-times');
         $browser->request('GET', 'https://egov.uscis.gov/processing-times');
 
+        $checkResponse = static function (Response $response) use ($io): bool {
+            if ($response->getStatusCode() !== 200) {
+                $io->error("Get non 200 response code: {$response->getStatusCode()}");
+                $io->title('Response headers');
+                $io->table(
+                    ['header', 'value'],
+                    array_map(
+                        static fn ($h, $v) => [$h, implode("\n", $v)],
+                        array_keys($response->getHeaders()),
+                        array_values($response->getHeaders())
+                    )
+                );
+
+                $io->title('Response body');
+                $io->text($response->getContent());
+
+                return false;
+            }
+
+            return true;
+        };
+
         /** @var Response $response */
         $response = $browser->getResponse();
-        if ($response->getStatusCode() !== 200) {
-            $io->error("Get non 200 response code: {$response->getStatusCode()}");
-            $io->title('Response headers');
-            $io->table(
-                ['header', 'value'],
-                array_map(
-                    static fn ($h, $v) => [$h, implode("\n", $v)],
-                    array_keys($response->getHeaders()),
-                    array_values($response->getHeaders())
-                )
-            );
-
-            $io->title('Response body');
-            $io->text($response->getContent());
+        if (!$checkResponse($response)) {
             return self::FAILURE;
         }
 
@@ -80,21 +91,7 @@ class CrawlI485Command extends Command
 
         /** @var Response $response */
         $response = $browser->getResponse();
-        if ($response->getStatusCode() !== 200) {
-            $io->error("Get non 200 response code: {$response->getStatusCode()}");
-            $io->title('Response headers');
-            $io->table(
-                ['header', 'value'],
-                array_map(
-                    static fn ($h, $v) => [$h, implode("\n", $v)],
-                    array_keys($response->getHeaders()),
-                    array_values($response->getHeaders())
-                )
-            );
-
-            $io->title('Response body');
-            $io->text($response->getContent());
-
+        if (!$checkResponse($response)) {
             return self::FAILURE;
         }
 
@@ -102,8 +99,12 @@ class CrawlI485Command extends Command
         $apiResponse = $this->serializer->deserialize($response->getContent(), FormOfficesApiResponse::class, 'json');
         /** @var Office[] $offices */
         $offices = $apiResponse->data->wrapper->offices;
+        $codeToDescription = [];
+        foreach ($offices as $office) {
+            $codeToDescription[$office->code] = $office->description;
+        }
 
-        $data = [];
+        $times = [];
         $io->progressStart(count($offices));
         foreach ($offices as $office) {
             /** @noinspection DisconnectedForeachInstructionInspection */
@@ -111,6 +112,7 @@ class CrawlI485Command extends Command
 
             $url = "https://egov.uscis.gov/processing-times/api/processingtime/I-485/{$office->code}/131A";
 
+            $today = new DateTimeImmutable();
             $browser->request('GET', $url);
             try {
                 /** @var Response $response */
@@ -119,13 +121,10 @@ class CrawlI485Command extends Command
                 $io->error($e->getMessage());
                 continue;
             }
-            $data[$office->description] = $response->getContent();
-        }
 
-        $times = [];
-        foreach ($data as $center => $jsonString) {
             /** @var ApiResponse $apiResponse */
-            $apiResponse = $this->serializer->deserialize($jsonString, ApiResponse::class, 'json');
+            $content = $response->getContent();
+            $apiResponse = $this->serializer->deserialize($content, ApiResponse::class, 'json');
 
             /** @var Subtype[] $subtypes */
             $subtypes = $apiResponse->data->processingTime->subtypes;
@@ -133,24 +132,41 @@ class CrawlI485Command extends Command
                 $primarySubtype = $subtypes[0];
                 $ranges = $primarySubtype->range;
                 if (count($ranges) > 0) {
+                    $officeCode = $apiResponse->data->processingTime->officeCode;
+                    $center = $codeToDescription[$officeCode];
                     $waitTime = $ranges[1]->value ?? $ranges[0]->value ?? -1.0;
-                    $times[] = [$center, $waitTime];
+                    $waitTime *= match (strtolower($ranges[1]->unit ?? $ranges[0]->unit ?? 'months')) {
+                        'years' => 12,
+                        'days' => 0.33,
+                        default => 1
+                    };
+
+                    $entry = $this->entryRepository->findOneBy([
+                        'officeCode' => $officeCode,
+                        'createdAt' => $today,
+                    ]);
+                    if ($entry !== null) {
+                        continue;
+                    }
 
                     $entry = new I485Entry();
                     $entry->setProcessingCenter($center);
-                    $entry->setRawResponse($jsonString);
+                    $entry->setOfficeCode($officeCode);
+                    $entry->setRawResponse($content);
                     $entry->setWaitTime($waitTime);
                     $entry->setPublicationDate(new DateTimeImmutable($primarySubtype->publicationDate));
                     $entry->setServiceRequestDate(new DateTimeImmutable($primarySubtype->serviceRequestDate));
 
                     $this->entityManager->persist($entry);
+                    $times[] = [$center, $waitTime];
+
                 }
             }
         }
 
         $this->entityManager->flush();
 
-        $io->table(['center', 'time'], $times);
+        $io->table(['Center', 'Waiting time'], $times);
 
         return Command::SUCCESS;
     }
