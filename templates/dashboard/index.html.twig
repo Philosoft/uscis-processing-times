@@ -3,11 +3,63 @@
 {% block title %}Hello DashboardController!{% endblock %}
 
 {% block body %}
-    <h2 class="text-2xl my-1">I140 premium processing times</h2>
+    <div class="flex">
+        <div class="w-10/12">
+            <h2 class="text-2xl my-1">I140 premium processing times</h2>
 
-    {{ render_chart(i140Chart) }}
+            {{ render_chart(i140Chart) }}
+        </div>
 
-    <h2 class="text-2xl my-1">I485 premium processing times</h2>
+        <div class="w-2/12">
+            <h2 class="text-2xl my-1">Tabular view</h2>
 
-    {{ render_chart(i485Chart) }}
+            <table class="rounded">
+                <thead class="border-b font-bold bg-slate-50">
+                <tr class="p-1">
+                    <th>Center</th>
+                    <th>Waiting time</th>
+                </tr>
+                </thead>
+
+                <tbody>
+                {% for entry in i140Entries %}
+                    <tr class="border-b p-1">
+                        <td>{{ entry.processingCenter }}</td>
+                        <td>{{ entry.waitTime }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="flex">
+        <div class="w-10/12">
+            <h2 class="text-2xl my-1">I485 premium processing times</h2>
+
+            {{ render_chart(i485Chart) }}
+        </div>
+
+        <div class="w-2/12">
+            <h2 class="text-2xl">Tabular view</h2>
+
+            <table>
+                <thead class="text-bold bg-slate-300 rounded border-b">
+                <tr>
+                    <th>Center</th>
+                    <th>Time</th>
+                </tr>
+                </thead>
+
+                <tbody>
+                {% for entry in i485Entries %}
+                    <tr class="border-b even:bg-slate-300 p-1">
+                        <td>{{ entry.processingCenter }}</td>
+                        <td>{{ entry.waitTime }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 {% endblock %}

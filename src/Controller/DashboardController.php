@@ -74,7 +74,23 @@ class DashboardController extends AbstractController
 
         return $this->render('dashboard/index.html.twig', [
             'i140Chart' => $i140Chart,
+            'i140Entries' => $entryRepository->findBy(
+                [
+                    'createdAt' => new \DateTimeImmutable(),
+                ],
+                [
+                    'waitTime' => 'ASC',
+                ]
+            ),
             'i485Chart' => $i485Chart,
+            'i485Entries' => $i485EntryRepository->findBy(
+                [
+                    'createdAt' => new \DateTimeImmutable(),
+                ],
+                [
+                    'waitTime' => 'ASC',
+                ]
+            ),
         ]);
     }
 }

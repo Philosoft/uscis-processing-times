@@ -159,7 +159,6 @@ class CrawlI485Command extends Command
 
                     $this->entityManager->persist($entry);
                     $times[] = [$center, $waitTime];
-
                 }
             }
         }
