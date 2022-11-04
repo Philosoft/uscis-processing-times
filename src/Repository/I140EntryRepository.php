@@ -41,28 +41,23 @@ class I140EntryRepository extends ServiceEntityRepository
         }
     }
 
-//    /**
-//     * @return I140Entry[] Returns an array of I140Entry objects
-//     */
-//    public function findByExampleField($value): array
-//    {
-//        return $this->createQueryBuilder('i')
-//            ->andWhere('i.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->orderBy('i.id', 'ASC')
-//            ->setMaxResults(10)
-//            ->getQuery()
-//            ->getResult()
-//        ;
-//    }
+    /**
+     * @return array{0: array<string, 1>, 1: array<string, float[]>}
+     */
+    public function getDataForChart(): array
+    {
+        $data = [];
+        $labels = [];
 
-//    public function findOneBySomeField($value): ?I140Entry
-//    {
-//        return $this->createQueryBuilder('i')
-//            ->andWhere('i.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->getQuery()
-//            ->getOneOrNullResult()
-//        ;
-//    }
+        $qb = $this->createQueryBuilder('e')
+            ->orderBy('e.createdAt');
+        /** @var I140Entry[] $result */
+        $result = $qb->getQuery()->getResult();
+        foreach ($result as $entry) {
+            $data[$entry->getProcessingCenter()][] = $entry->getWaitTime();
+            $labels[$entry->getCreatedAt()->format('Y-m-d')] = 1;
+        }
+
+        return [$labels, $data];
+    }
 }
