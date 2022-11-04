@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
         <meta charset="UTF-8">
         <title>{% block title %}Welcome!{% endblock %}</title>
@@ -14,6 +14,13 @@
         {% endblock %}
     </head>
     <body>
+    <div class="flex border rounded shadow p-2 bg-sky-50">
+        <div class="w-2/12 text-xl font-bold">
+            <a href="{{ path("app__home") }}">USCIS premium</a>
+        </div>
+    </div>
+    <div class="mx-auto w-2/3">
         {% block body %}{% endblock %}
+    </div>
     </body>
 </html>
