@@ -5,3 +5,5 @@ parameters:
     symfony:
         containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
         consoleApplicationLoader: tools/phpstan/console-application.php
+    doctrine:
+        objectManagerLoader: tools/phpstan/object-manager.php

@@ -12,7 +12,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: I485EntryRepository::class)]
 #[ORM\Index(fields: ['createdAt'])]
-final class I485Entry
+class I485Entry
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
