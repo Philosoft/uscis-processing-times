@@ -3,7 +3,11 @@
 {% block title %}Hello DashboardController!{% endblock %}
 
 {% block body %}
-    <h1 class="text-3xl my-1">I140 premium processing times</h1>
+    <h2 class="text-2xl my-1">I140 premium processing times</h2>
 
-    {{ render_chart(chart) }}
+    {{ render_chart(i140Chart) }}
+
+    <h2 class="text-2xl my-1">I485 premium processing times</h2>
+
+    {{ render_chart(i485Chart) }}
 {% endblock %}

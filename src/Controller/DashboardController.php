@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Repository\I140EntryRepository;
+use App\Repository\I485EntryRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -14,8 +15,11 @@ use Symfony\UX\Chartjs\Model\Chart;
 class DashboardController extends AbstractController
 {
     #[Route('/', name: 'app__home')]
-    public function index(I140EntryRepository $entryRepository, ChartBuilderInterface $chartBuilder): Response
-    {
+    public function index(
+        I140EntryRepository $entryRepository,
+        I485EntryRepository $i485EntryRepository,
+        ChartBuilderInterface $chartBuilder
+    ): Response {
         [$labels, $data] = $entryRepository->getDataForChart();
 
         // mainline colors from elementary os palette @see https://elementary.io/brand
@@ -42,14 +46,35 @@ class DashboardController extends AbstractController
             ];
         }
 
-        $chart = $chartBuilder->createChart(Chart::TYPE_LINE);
-        $chart->setData([
+        $i140Chart = $chartBuilder->createChart(Chart::TYPE_LINE);
+        $i140Chart->setData([
+            'labels' => array_keys($labels),
+            'datasets' => $datasets,
+        ]);
+
+        [$labels, $data] = $i485EntryRepository->getDataForChart();
+
+        $datasets = [];
+        $colorIterator = -1;
+        foreach ($data as $center => $series) {
+            $colorIterator++;
+            $datasets[] = [
+                'label' => $center,
+                'data' => $series,
+                'borderColor' => $flatColors[$colorIterator % count($flatColors)],
+                'backgroundColor' => 'rgb(255, 255, 255)',
+            ];
+        }
+
+        $i485Chart = $chartBuilder->createChart(Chart::TYPE_LINE);
+        $i485Chart->setData([
             'labels' => array_keys($labels),
             'datasets' => $datasets,
         ]);
 
         return $this->render('dashboard/index.html.twig', [
-            'chart' => $chart,
+            'i140Chart' => $i140Chart,
+            'i485Chart' => $i485Chart,
         ]);
     }
 }

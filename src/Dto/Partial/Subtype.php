@@ -13,7 +13,7 @@ final class Subtype
         public readonly string $formType,
         #[SerializedName('publication_date')]
         public readonly string $publicationDate,
-        #[SerializedName('service_request_date_en')]
+        #[SerializedName('service_request_date')]
         public readonly string $serviceRequestDate,
         /** @var Range[] $range */
         public readonly array $range,
