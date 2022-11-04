@@ -39,6 +39,10 @@ class I485Entry
     #[ORM\Column(type: Types::DATE_IMMUTABLE)]
     private DateTimeImmutable $serviceRequestDate;
 
+    #[ORM\Column(length: 255)]
+    #[Assert\NotBlank]
+    private string $officeCode = '';
+
     public function __construct()
     {
         $now = new DateTimeImmutable();
@@ -121,6 +125,18 @@ class I485Entry
     public function setServiceRequestDate(DateTimeImmutable $serviceRequestDate): self
     {
         $this->serviceRequestDate = $serviceRequestDate;
+
+        return $this;
+    }
+
+    public function getOfficeCode(): string
+    {
+        return $this->officeCode;
+    }
+
+    public function setOfficeCode(string $officeCode): self
+    {
+        $this->officeCode = $officeCode;
 
         return $this;
     }
