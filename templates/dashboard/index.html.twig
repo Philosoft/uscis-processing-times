@@ -4,13 +4,13 @@
 
 {% block body %}
     <div class="flex">
-        <div class="w-10/12">
+        <div class="w-9/12">
             <h2 class="text-2xl my-1">I140 premium processing times</h2>
 
             {{ render_chart(i140Chart) }}
         </div>
 
-        <div class="w-2/12">
+        <div class="w-3/12">
             <h2 class="text-2xl my-1">Tabular view</h2>
 
             <table class="rounded">
@@ -34,13 +34,13 @@
     </div>
 
     <div class="flex">
-        <div class="w-10/12">
+        <div class="w-9/12">
             <h2 class="text-2xl my-1">I485 premium processing times</h2>
 
             {{ render_chart(i485Chart) }}
         </div>
 
-        <div class="w-2/12">
+        <div class="w-3/12">
             <h2 class="text-2xl">Tabular view</h2>
 
             <table>
@@ -48,6 +48,8 @@
                 <tr>
                     <th>Center</th>
                     <th>Time</th>
+                    <th>Publication date</th>
+                    <th>Service request date</th>
                 </tr>
                 </thead>
 
@@ -56,6 +58,8 @@
                     <tr class="border-b even:bg-slate-300 even:dark:bg-slate-900 even:dark:text-slate-200 p-1">
                         <td>{{ entry.processingCenter }}</td>
                         <td>{{ entry.waitTime }}</td>
+                        <td>{{ entry.publicationDate|date('Y.m.d') }}</td>
+                        <td>{{ entry.serviceRequestDate|date('Y.m.d') }}</td>
                     </tr>
                 {% endfor %}
                 </tbody>
