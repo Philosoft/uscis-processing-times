@@ -52,6 +52,9 @@ jobs:
       - name: Lint container
         run: php bin/console lint:container
 
+      - name: Lint templates
+        run: php bin/console lint:twig templates
+
       - name: Lint YAML configs
         run: php bin/console lint:yaml config/
 
