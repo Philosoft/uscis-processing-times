@@ -7,6 +7,7 @@ namespace App\Command;
 use App\Dto\ApiResponse;
 use App\Dto\Partial\Subtype;
 use App\Entity\I140Entry;
+use App\Repository\I140EntryRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\BrowserKit\Exception\BadMethodCallException;
 use Symfony\Component\BrowserKit\HttpBrowser;
@@ -32,7 +33,8 @@ class CrawlI140Command extends Command
 
     public function __construct(
         private readonly SerializerInterface $serializer,
-        private readonly EntityManagerInterface $entityManager
+        private readonly EntityManagerInterface $entityManager,
+        private readonly I140EntryRepository $entryRepository
     ) {
         parent::__construct(null);
     }
@@ -54,7 +56,7 @@ class CrawlI140Command extends Command
 
         $browser->request('GET', 'https://egov.uscis.gov/processing-times');
 
-        $data = [];
+        $times = [];
         foreach (self::PROCESSING_CENTER_TO_ENDPOINT as $center => $url) {
             $io->info("Working on {$center}");
             $browser->request('GET', $url);
@@ -65,14 +67,8 @@ class CrawlI140Command extends Command
                 $io->error($e->getMessage());
                 continue;
             }
-            $data[$center] = $response->getContent();
-        }
 
-        /** @var I140Entry[] $entries */
-        $entries = [];
-
-        $times = [];
-        foreach ($data as $center => $jsonString) {
+            $jsonString = $response->getContent();
             /** @var ApiResponse $apiResponse */
             $apiResponse = $this->serializer->deserialize($jsonString, ApiResponse::class, 'json');
             /** @var Subtype[] $subtypes */
@@ -83,6 +79,14 @@ class CrawlI140Command extends Command
                 if (count($ranges) > 0) {
                     $waitTime = $ranges[1]->value ?? $ranges[0]->value ?? -1.0;
                     $times[] = [$center, $waitTime];
+
+                    $entry = $this->entryRepository->findOneBy([
+                        'processingCenter' => $center,
+                        'createdAt' => new \DateTimeImmutable(),
+                    ]);
+                    if ($entry !== null) {
+                        continue;
+                    }
 
                     $entry = new I140Entry();
                     $entry->setProcessingCenter($center);
